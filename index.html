@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flowdeck — Task management that flows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0b0d12;
+    --bg-2: #11141b;
+    --surface: rgba(255, 255, 255, 0.04);
+    --surface-2: rgba(255, 255, 255, 0.06);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-2: rgba(255, 255, 255, 0.12);
+    --text: #f3f4f6;
+    --text-muted: #9aa3b2;
+    --text-dim: #6b7280;
+    --accent: #7c5cff;
+    --accent-2: #22d3ee;
+    --accent-3: #f472b6;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    padding: 24px 32px 80px;
+    isolation: isolate;
+  }
+
+  /* Ambient background glows */
+  .hero::before,
+  .hero::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.35;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .hero::before {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, #7c5cff 0%, transparent 70%);
+    top: -200px; left: -150px;
+  }
+  .hero::after {
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, #22d3ee 0%, transparent 70%);
+    top: 100px; right: -250px;
+    opacity: 0.25;
+  }
+
+  /* Subtle grid backdrop */
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.7), transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.7), transparent 70%);
+    z-index: -2;
+  }
+
+  /* Nav */
+  .nav {
+    max-width: 1280px;
+    margin: 0 auto 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    box-shadow: 0 6px 20px rgba(124, 92, 255, 0.4);
+  }
+  .brand-mark svg { width: 16px; height: 16px; }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .nav-actions a.signin {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-actions a.signin:hover { color: var(--text); }
+
+  /* Layout */
+  .hero-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 64px;
+    align-items: center;
+  }
+
+  /* Copy */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+  .badge-pill {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #0b0d12;
+    font-weight: 600;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .badge a { color: var(--text); text-decoration: none; font-weight: 500; }
+  .badge svg { width: 12px; height: 12px; }
+
+  h1.headline {
+    font-size: clamp(40px, 5.5vw, 68px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    margin: 0 0 20px;
+  }
+  .headline .grad {
+    background: linear-gradient(135deg, #a78bfa 0%, #22d3ee 60%, #f472b6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  p.sub {
+    font-size: 18px;
+    color: var(--text-muted);
+    margin: 0 0 36px;
+    max-width: 540px;
+    line-height: 1.6;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #5b39ff);
+    color: white;
+    box-shadow: 0 8px 24px rgba(124, 92, 255, 0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(124, 92, 255, 0.45); }
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border-2);
+  }
+  .btn-ghost:hover { background: var(--surface-2); }
+  .btn svg { width: 16px; height: 16px; }
+
+  .trust {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .avatars {
+    display: flex;
+  }
+  .avatars span {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    margin-left: -8px;
+    display: grid; place-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+  }
+  .avatars span:first-child { margin-left: 0; }
+  .avatars span:nth-child(1) { background: linear-gradient(135deg, #f472b6, #ef4444); }
+  .avatars span:nth-child(2) { background: linear-gradient(135deg, #22d3ee, #3b82f6); }
+  .avatars span:nth-child(3) { background: linear-gradient(135deg, #a78bfa, #7c5cff); }
+  .avatars span:nth-child(4) { background: linear-gradient(135deg, #34d399, #10b981); }
+  .trust-text {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .trust-text strong { color: var(--text); font-weight: 600; }
+  .stars { color: var(--warning); letter-spacing: 2px; }
+
+  /* Visual: task board mock */
+  .board {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid var(--border-2);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow:
+      0 30px 60px -20px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    backdrop-filter: blur(20px);
+    transform: perspective(1400px) rotateY(-6deg) rotateX(3deg);
+    transform-origin: center;
+  }
+  .board-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .board-title {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 14px;
+  }
+  .board-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .board-actions { display: flex; gap: 8px; }
+  .board-actions span {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: grid; place-items: center;
+    color: var(--text-muted);
+  }
+  .board-actions svg { width: 12px; height: 12px; }
+
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .col {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    min-height: 320px;
+  }
+  .col-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .col-head .count {
+    background: var(--surface-2);
+    color: var(--text);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .col-head .swatch {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .col[data-status="todo"] .swatch { background: var(--text-dim); }
+  .col[data-status="progress"] .swatch { background: var(--accent); }
+  .col[data-status="done"] .swatch { background: var(--success); }
+
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover { transform: translateY(-1px); border-color: var(--border-2); }
+  .card .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .tag.design { background: rgba(244, 114, 182, 0.15); color: #f9a8d4; }
+  .tag.eng { background: rgba(124, 92, 255, 0.15); color: #c4b5fd; }
+  .tag.bug { background: rgba(248, 113, 113, 0.15); color: #fca5a5; }
+  .tag.research { background: rgba(34, 211, 238, 0.15); color: #67e8f9; }
+  .tag.copy { background: rgba(251, 191, 36, 0.15); color: #fcd34d; }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .card-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .card-meta .left { display: flex; align-items: center; gap: 10px; }
+  .card-meta .due { display: inline-flex; align-items: center; gap: 4px; }
+  .card-meta svg { width: 11px; height: 11px; }
+  .card-meta .assignee {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 9px; font-weight: 700; color: white;
+  }
+  .a-pink { background: linear-gradient(135deg, #f472b6, #ef4444); }
+  .a-cyan { background: linear-gradient(135deg, #22d3ee, #3b82f6); }
+  .a-purple { background: linear-gradient(135deg, #a78bfa, #7c5cff); }
+  .a-green { background: linear-gradient(135deg, #34d399, #10b981); }
+  .a-amber { background: linear-gradient(135deg, #fcd34d, #f59e0b); }
+
+  .progress {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: 999px;
+  }
+
+  /* Floating notification card */
+  .floater {
+    position: absolute;
+    background: rgba(17, 20, 27, 0.9);
+    border: 1px solid var(--border-2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.6);
+    display: flex; align-items: center; gap: 10px;
+    z-index: 2;
+  }
+  .floater-1 {
+    bottom: -24px;
+    left: -28px;
+    transform: rotate(-3deg);
+  }
+  .floater-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #34d399, #10b981);
+    display: grid; place-items: center;
+    color: white;
+  }
+  .floater-icon svg { width: 16px; height: 16px; }
+  .floater-text { font-size: 12px; }
+  .floater-text strong { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+  .floater-text span { color: var(--text-muted); }
+
+  .floater-2 {
+    top: -20px;
+    right: -28px;
+    transform: rotate(2deg);
+    padding: 10px 14px;
+  }
+  .floater-2 .floater-icon {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+
+  /* Responsive */
+  @media (max-width: 980px) {
+    .hero { padding: 20px 20px 60px; }
+    .nav { margin-bottom: 48px; }
+    .nav-links { display: none; }
+    .hero-grid {
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+    .board { transform: none; }
+    .floater-1, .floater-2 { display: none; }
+    p.sub { font-size: 16px; }
+  }
+
+  @media (max-width: 540px) {
+    .columns { grid-template-columns: 1fr; }
+    .col { min-height: auto; }
+    .col:not(:first-child) { display: none; }
+    .nav-actions a.signin { display: none; }
+    .trust { gap: 14px; }
+  }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <section class="hero">
+    <nav class="nav">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12l4 4L19 6" />
+          </svg>
+        </span>
+        Flowdeck
+      </div>
+      <ul class="nav-links">
+        <li><a href="#">Product</a></li>
+        <li><a href="#">Solutions</a></li>
+        <li><a href="#">Pricing</a></li>
+        <li><a href="#">Changelog</a></li>
+        <li><a href="#">Docs</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#" class="signin">Sign in</a>
+        <a href="#" class="btn btn-ghost" style="padding: 8px 14px; font-size: 14px;">Get started</a>
+      </div>
+    </nav>
+
+    <div class="hero-grid">
+      <div class="copy">
+        <div class="badge">
+          <span class="badge-pill">New</span>
+          <a href="#">AI-powered sprint planning is here</a>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+        </div>
+
+        <h1 class="headline">
+          Ship work, <span class="grad">not status&nbsp;updates.</span>
+        </h1>
+
+        <p class="sub">
+          Flowdeck is the task manager built for teams that move fast. Plan sprints, track work, and unblock teammates — all from one keyboard-friendly workspace.
+        </p>
+
+        <div class="cta-row">
+          <a href="#" class="btn btn-primary">
+            Start for free
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+          </a>
+          <a href="#" class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none" /></svg>
+            Watch demo
+          </a>
+        </div>
+
+        <div class="trust">
+          <div class="avatars" aria-hidden="true">
+            <span>JK</span><span>MR</span><span>AS</span><span>TL</span>
+          </div>
+          <div class="trust-text">
+            <strong>12,400+ teams</strong> shipping faster
+            <div><span class="stars">★★★★★</span> 4.9 on G2</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="visual">
+        <div class="board" role="img" aria-label="Task board preview">
+          <div class="board-bar">
+            <div class="board-title"><span class="dot"></span> Q2 Launch Sprint</div>
+            <div class="board-actions">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4" /></svg></span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg></span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/></svg></span>
+            </div>
+          </div>
+
+          <div class="columns">
+            <div class="col" data-status="todo">
+              <div class="col-head"><span><span class="swatch"></span>To do</span><span class="count">4</span></div>
+
+              <div class="card">
+                <span class="tag design">Design</span>
+                <div class="card-title">Refresh onboarding empty states</div>
+                <div class="card-meta">
+                  <div class="left">
+                    <span class="due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> May 24</span>
+                  </div>
+                  <span class="assignee a-pink">AS</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <span class="tag research">Research</span>
+                <div class="card-title">Interview 5 power users on automations</div>
+                <div class="card-meta">
+                  <div class="left">
+                    <span class="due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> May 28</span>
+                  </div>
+                  <span class="assignee a-cyan">MR</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <span class="tag copy">Copy</span>
+                <div class="card-title">Rewrite pricing page hero</div>
+                <div class="card-meta">
+                  <div class="left">
+                    <span class="due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> May 30</span>
+                  </div>
+                  <span class="assignee a-amber">TL</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="col" data-status="progress">
+              <div class="col-head"><span><span class="swatch"></span>In progress</span><span class="count">3</span></div>
+
+              <div class="card">
+                <span class="tag eng">Engineering</span>
+                <div class="card-title">Realtime presence in shared boards</div>
+                <div class="progress"><div style="width: 68%"></div></div>
+                <div class="card-meta" style="margin-top: 10px;">
+                  <div class="left">
+                    <span class="due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 2d left</span>
+                  </div>
+                  <span class="assignee a-purple">JK</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <span class="tag bug">Bug</span>
+                <div class="card-title">Drag-and-drop flicker on Safari 17</div>
+                <div class="progress"><div style="width: 35%"></div></div>
+                <div class="card-meta" style="margin-top: 10px;">
+                  <div class="left">
+                    <span class="due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 4d left</span>
+                  </div>
+                  <span class="assignee a-cyan">MR</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <span class="tag eng">Engineering</span>
+                <div class="card-title">Slack 2.0 integration — slash commands</div>
+                <div class="progress"><div style="width: 82%"></div></div>
+                <div class="card-meta" style="margin-top: 10px;">
+                  <div class="left">
+                    <span class="due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 1d left</span>
+                  </div>
+                  <span class="assignee a-green">SK</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="col" data-status="done">
+              <div class="col-head"><span><span class="swatch"></span>Done</span><span class="count">12</span></div>
+
+              <div class="card" style="opacity: 0.85;">
+                <span class="tag eng">Engineering</span>
+                <div class="card-title">Keyboard shortcut overlay (⌘ K)</div>
+                <div class="card-meta">
+                  <div class="left">
+                    <span class="due" style="color: var(--success);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Shipped</span>
+                  </div>
+                  <span class="assignee a-purple">JK</span>
+                </div>
+              </div>
+
+              <div class="card" style="opacity: 0.85;">
+                <span class="tag design">Design</span>
+                <div class="card-title">Dark mode color tokens v2</div>
+                <div class="card-meta">
+                  <div class="left">
+                    <span class="due" style="color: var(--success);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Shipped</span>
+                  </div>
+                  <span class="assignee a-pink">AS</span>
+                </div>
+              </div>
+
+              <div class="card" style="opacity: 0.85;">
+                <span class="tag research">Research</span>
+                <div class="card-title">Q1 NPS write-up</div>
+                <div class="card-meta">
+                  <div class="left">
+                    <span class="due" style="color: var(--success);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Shipped</span>
+                  </div>
+                  <span class="assignee a-amber">TL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="floater floater-1">
+            <div class="floater-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div class="floater-text">
+              <strong>Task completed</strong>
+              <span>by Jamie · just now</span>
+            </div>
+          </div>
+
+          <div class="floater floater-2">
+            <div class="floater-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="white"/></svg>
+            </div>
+            <div class="floater-text">
+              <strong>AI suggested 3 tasks</strong>
+              <span>for the launch sprint</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
